@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Device Configuration{% endblock %}
+
+{% block content %}
+    <div class="px-4 py-3 my-2 text-center">
+        <h1 class="display-6 fw-bold text-primary">Device Configuration for ID {{ device_id }}</h1>
+        <p>Last check at {{ time.strftime('%H:%M %d/%m/%Y') }} with <strong>{{ curr_temp }}°C</strong></p>
+        {% if enabled %}<p>Next Check with alert <strong>{{ time_next.strftime('%H:%M %d/%m/%Y') }}</strong></p>{% endif %}    </div>
+    <form method="POST" action="/device/{{ device_id }}">
+        <!-- Device Name -->
+        <div class="mb-3">
+            <label for="deviceName" class="form-label fw-bold fs-5">Device Name</label>
+            <input type="text" class="form-control" id="deviceName" name="deviceName" value="{{ device_name }}" placeholder="Enter device name" required readonly>
+        </div>
+
+        <!-- Maximum Temperature -->
+        <div class="mb-3">
+            <label for="maxTemperature" class="form-label fw-bold fs-5">Maximum Temperature (°C) : 
+                <span id="tempValue">{{ max_temp }}</span>°C
+            </label>
+            <input type="range" class="form-range" min="-40" max="40" step="1" id="maxTemperature" name="maxTemperature" value="{{ max_temp or 0 }}">
+            <div class="d-flex justify-content-between">
+                <span>-40°C</span>
+                <span>40°C</span>
+            </div>
+        </div>
+
+         <!-- Alert Interval (Time Next Adjustment) -->
+         <div class="mb-3">
+            <label for="alertInterval" class="form-label fw-bold fs-5">Next Check : 
+                <span id="intervalValue">{{ time_diff or 0 }}</span> hours from now
+            </label>
+            <input type="range" class="form-range" min="0" max="48" step="1" id="alertInterval" name="alertInterval" value="{{ time_diff or 0 }}">
+            <div class="d-flex justify-content-between">
+                <span>Now</span>
+                <span>+48 hours</span>
+            </div>
+        </div>
+
+        <!-- Alert Activation -->
+        <div class="mb-3">
+            <label for="alertSwitch" class="form-label fw-bold fs-5">Alert Activated</label>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="alertSwitch" name="alertSwitch" {% if enabled %}checked{% endif %}>
+                <label class="form-check-label" for="alertSwitch">No / Yes</label>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-2">
+            <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">Submit</button>
+        </div>
+    </form>
+
+    <!-- Bouton Retour à la liste des devices -->
+    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-4">
+        <a href="/devices" class="btn btn-secondary btn-lg px-4 gap-3">Back to Device List</a>
+    </div>
+{% endblock %}

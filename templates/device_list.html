@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Device Configuration{% endblock %}
+
+{% block content %}
+    <div class="px-4 py-3 my-2 text-center">
+        <h1 class="display-6 fw-bold text-primary">Device List</h1>
+        <p>Click on a device to view or configure its settings</p>
+    </div>
+
+    <!-- Liste des Devices -->
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <ul class="list-group">
+                {% for device in devices %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">{{ device.device_name }}</span>
+                    <a href="/device/{{ device.device_id }}" class="btn btn-primary btn-sm">Configure</a>
+                </li>
+                {% else %}
+                <li class="list-group-item text-center">No devices available</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

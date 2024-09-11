@@ -1,0 +1,3 @@
+redis:
+  host: 'example-redis.cache.windows.net'
+  access-key: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
