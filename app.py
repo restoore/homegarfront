@@ -18,7 +18,6 @@ config_file = 'config.yml'
 with open(config_file, 'rb') as f:
     config = yaml.unsafe_load(f)
 
-
 # Connexion Redis
 r = redis.Redis(
     host=config['redis']['host'], 
