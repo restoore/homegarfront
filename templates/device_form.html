@@ -5,19 +5,23 @@
 {% block content %}
     <div class="px-4 py-3 my-2 text-center">
         <h1 class="display-6 fw-bold text-primary">Device Configuration for ID {{ device_id }}</h1>
-        <p>Last check at {{ data['alert_last_check'] }} with <strong>{{ data['alert_temp_curr'] }}°C</strong></p>
-        {% if data['alert_enabled'] %}<p>Next Check with alert <strong>{{ data['alert_next_check'] }}</strong></p>{% endif %}    </div>
+        <p>
+            {% if data['alert_enabled'] and data['alert_next_check'] != "" %}<span class="badge rounded-pill text-bg-info">Heads up!</span> Alert sould be sent starting from the <strong>{{ data['alert_next_check'] }}</strong></br>{% endif %}
+            Last check on {{ data['alert_last_check'] }} with a temperature of <strong>{{ data['alert_temp_curr'] }}°C</strong>   
+        </p>
+    </div>
+    
     <form method="POST" action="/device/{{ device_id }}">
         <!-- Device Name -->
         <div class="mb-3">
-            <label for="alert_name" class="form-label fw-bold fs-5">Device Name</label>
+            <label for="alert_name" class="form-label fw-medium fs-5">Device Name</label>
             <input type="text" class="form-control" id="alert_name" name="alert_name" value="{{ data['alert_name'] }}" placeholder="Enter device name" required readonly>
         </div>
 
         <!-- Maximum Temperature -->
         <div class="mb-3">
-            <label for="alert_temp_max" class="form-label fw-bold fs-5">Maximum Temperature (°C) : 
-                <span id="tempValue">{{ data['alert_temp_max'] }}</span>°C
+            <label for="alert_temp_max" class="form-label fw-medium fs-5">Maximum Temperature (°C) : 
+                <strong><span id="tempValue">{{ data['alert_temp_max'] }}</span>°C</strong>
             </label>
             <input type="range" class="form-range" min="-40" max="40" step="1" id="alert_temp_max" name="alert_temp_max" value="{{ data['alert_temp_max'] or 0 }}">
             <div class="d-flex justify-content-between">
@@ -28,8 +32,8 @@
 
          <!-- Alert Interval (Time Next Adjustment) -->
          <div class="mb-3">
-            <label for="alert_frequency" class="form-label fw-bold fs-5">Frequency between alert notifications :  
-                <span id="intervalValue">{{ data['alert_frequency'] or 0 }}</span> hours
+            <label for="alert_frequency" class="form-label fw-medium fs-5">Notification frequency :  
+                <strong><span id="intervalValue">{{ data['alert_frequency'] or 0 }}</span> hours</strong>
             </label>
             <input type="range" class="form-range" min="0" max="48" step="1" id="alert_frequency" name="alert_frequency" value="{{ data['alert_frequency'] or 0 }}">
             <div class="d-flex justify-content-between">
@@ -40,7 +44,7 @@
 
         <!-- Alert Activation -->
         <div class="mb-3">
-            <label for="alert_enabled" class="form-label fw-bold fs-5">Alert Activated</label>
+            <label for="alert_enabled" class="form-label fs-5 fw-medium">Alert Activated</label>
             <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="alert_enabled" name="alert_enabled" {% if data['alert_enabled'] == 'on' %}checked{% endif %}>
                 <label class="form-check-label" for="alert_enabled">No / Yes</label>

@@ -82,14 +82,17 @@ def device_config(device_id):
             alert_next_check = datetime.now(timezone) + timedelta(hours=alert_frequency)
             r.set(f"{device_id}_alert_next_check", alert_next_check.strftime('%Y-%m-%d %H:%M:%S'))
         
-        flash('Data have been successfully recorded 👌', 'success')  # 'success' est la catégorie de l'alerte
+        flash('Changes saved successfully 👌', 'success')  # 'success' est la catégorie de l'alerte
         return redirect(url_for('device_config', device_id=device_id))
     
     # On met en forme les données
     alert_last_check = timezone.localize(datetime.strptime(alert_data['alert_last_check'], '%Y-%m-%d %H:%M:%S'))
-    alert_data['alert_last_check'] = alert_last_check.strftime("%d/%m %H:%M")
-    alert_next_check = timezone.localize(datetime.strptime(alert_data['alert_next_check'], '%Y-%m-%d %H:%M:%S'))
-    alert_data['alert_next_check'] = alert_next_check.strftime("%d/%m %H:%M")
+    alert_data['alert_last_check'] = alert_last_check.strftime("%d/%m at %H:%M")
+    alert_temp_curr = float(alert_data['alert_temp_curr'])
+    alert_data['alert_temp_curr'] = round(alert_temp_curr,1)
+    if alert_data['alert_next_check'] != "":
+        alert_next_check = timezone.localize(datetime.strptime(alert_data['alert_next_check'], '%Y-%m-%d %H:%M:%S'))
+        alert_data['alert_next_check'] = alert_next_check.strftime("%d/%m at %H:%M")
     # Rendre la page avec les données remplies
     return render_template('device_form.html', 
                            data=alert_data,
