@@ -8,6 +8,20 @@
 </head>
 <body>
     <div class="container py-5">
+        <!-- Notifications (flash messages) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="my-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        <!-- Contenu principal -->
         {% block content %}{% endblock %}
     </div>
 
@@ -20,14 +34,14 @@
     <!-- JavaScript for Range Display -->
     <script>
         // Display and update temperature value
-        const tempRange = document.getElementById('maxTemperature');
+        const tempRange = document.getElementById('alert_temp_max');
         const tempValue = document.getElementById('tempValue');
         tempRange.addEventListener('input', function() {
             tempValue.textContent = this.value;
         });
 
         // Display and update alert interval value
-        const intervalRange = document.getElementById('alertInterval');
+        const intervalRange = document.getElementById('alert_frequency');
         const intervalValue = document.getElementById('intervalValue');
         intervalRange.addEventListener('input', function() {
             intervalValue.textContent = this.value;

@@ -3,3 +3,4 @@ gunicorn
 Werkzeug==2.2.2
 redis>=5.0.8
 PyYAML>=5.0.0
+pytz

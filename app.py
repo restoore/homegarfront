@@ -1,18 +1,22 @@
 import os
 import redis
 from datetime import datetime, timedelta
+import pytz
 import yaml
 
 
 from flask import (Flask, redirect, render_template, request,
-                   send_from_directory, url_for)
+                   send_from_directory, url_for,flash)
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Nécessaire pour utiliser flash
 
 # Version de l'application
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 config_file = 'config.yml'
+
+timezone = pytz.timezone('Europe/Paris')
 
 # Load the configuration from a YAML file
 with open(config_file, 'rb') as f:
@@ -29,12 +33,12 @@ r = redis.Redis(
 def get_devices_from_redis():
     devices = []
     # Récupérer tous les keys de type "alert_*_name" qui représentent les devices
-    device_keys = r.keys('alert_*_name')
+    device_keys = r.keys('*_alert_name')
     
     # Pour chaque device trouvé, extraire l'ID et le nom
     for key in device_keys:
         # Extraire l'ID du device à partir du key Redis (e.g., 'alert_49671_name' => ID = 49671)
-        device_id = key.decode().split('_')[1]
+        device_id = key.decode().split('_')[0]
         # Récupérer le nom du device depuis Redis
         device_name = r.get(key).decode() if r.get(key) else 'Unnamed Device'
         # Ajouter le device à la liste
@@ -51,62 +55,45 @@ def list_devices():
                            version=VERSION)
 
 @app.route('/device/<int:device_id>', methods=['GET', 'POST'])
-def device_config(device_id):
-    # Clés Redis spécifiques au device_id
-    alert_name_key = f"alert_{device_id}_name"
-    alert_curr_temp_key = f"alert_{device_id}_curr_temp"
-    alert_time_key = f"alert_{device_id}_time"
-    alert_max_temp_key = f"alert_{device_id}_max_temp"
-    alert_enabled_key = f"alert_{device_id}_enabled"
-    alert_time_next_key = f"alert_{device_id}_time_next"
-
+def device_config(device_id):   
+    # Créer un dictionnaire pour stocker les valeurs
+    alert_data = {}
+    keys = r.keys(f"{device_id}_alert_*")
+    # Itérer sur toutes les clés et les assigner à l'objet
+    for key in keys:
+        # Extraire le nom de l'attribut à partir de la clé Redis (supprimer l'ID et le séparateur "_")
+        attr_name = key.decode().replace(f"{device_id}_", "")
+        value = r.get(key).decode() if r.get(key) is not None else None
+        alert_data[attr_name] = value
+        
     if request.method == 'POST':
-        # Récupérer les données du formulaire
-        device_name = request.form['deviceName']
-        max_temperature = request.form['maxTemperature']
-        alert_enabled =  1 if request.form.get('alertSwitch') == 'on' else 0
-        time_next_delta = int(request.form['alertInterval'])  # Récupérer le nombre d'heures à ajouter à la date actuelle
-
-
-        # Mettre à jour Redis
-        r.set(alert_name_key, device_name)
-        r.set(alert_max_temp_key, max_temperature)
-        r.set(alert_enabled_key, alert_enabled)
-        # Calculer la nouvelle date et l'enregistrer
-        new_time_next = datetime.now() + timedelta(hours=time_next_delta)
-        r.set(alert_time_next_key, new_time_next.isoformat())  # Stocker en format ISO
+        # Parcourir les données soumises dans le formulaire et les sauvegarder dans Redis
+        for key, value in request.form.items():
+            # Sauvegarder chaque valeur du formulaire dans Redis avec l'ID
+            redis_key = f"{device_id}_{key}"
+            r.set(redis_key, value)
+        # Exception pour la check box alert_enabled
+        if  request.form.get('alert_enabled') is None:
+             r.set(f"{device_id}_alert_enabled", '0')
+        # Si date frequence de mise à jour n'a pas changé, on ne recalcule pas la date
+        if  alert_data["alert_frequency"] != request.form.get("alert_frequency"):
+            # Calculer la nouvelle date et l'enregistrer
+            alert_frequency = int(request.form['alert_frequency'])
+            alert_next_check = datetime.now(timezone) + timedelta(hours=alert_frequency)
+            r.set(f"{device_id}_alert_next_check", alert_next_check.strftime('%Y-%m-%d %H:%M:%S'))
+        
+        flash('Data have been successfully recorded 👌', 'success')  # 'success' est la catégorie de l'alerte
         return redirect(url_for('device_config', device_id=device_id))
-
-    # Lecture des données depuis Redis
-    device_name = r.get(alert_name_key).decode() if r.get(alert_name_key) else ""
-    try:
-        curr_temp = float(r.get(alert_curr_temp_key).decode()) if r.get(alert_curr_temp_key) else "N/A"
-        curr_temp = round(curr_temp, 1)  # Arrondir à une décimale
-    except ValueError:
-        curr_temp = "N/A"  # Si la valeur n'est pas un nombre, gérer l'exception
-    max_temp = r.get(alert_max_temp_key).decode() if r.get(alert_max_temp_key) else "0"
-    enabled = True if r.get(alert_enabled_key).decode() == "1" else False
     
-    # Lire la date du prochain relevé, ou prendre la date actuelle si elle n'existe pas
-    time_next = r.get(alert_time_next_key).decode() if r.get(alert_time_next_key) else datetime.now().isoformat()
-    # Calculer l'écart entre maintenant et le prochain relevé (en heures)
-    time_next_dt = datetime.fromisoformat(time_next)
-    time_diff = (time_next_dt - datetime.now()).total_seconds() / 3600
-    time_diff = int(min(max(time_diff, 0), 48))  # Limiter entre 0 et 48 heures
-    
-    time = r.get(alert_time_key).decode() if r.get(alert_time_key) else "N/A"
-    time_dt = datetime.fromisoformat(time)
-    
+    # On met en forme les données
+    alert_last_check = timezone.localize(datetime.strptime(alert_data['alert_last_check'], '%Y-%m-%d %H:%M:%S'))
+    alert_data['alert_last_check'] = alert_last_check.strftime("%d/%m %H:%M")
+    alert_next_check = timezone.localize(datetime.strptime(alert_data['alert_next_check'], '%Y-%m-%d %H:%M:%S'))
+    alert_data['alert_next_check'] = alert_next_check.strftime("%d/%m %H:%M")
     # Rendre la page avec les données remplies
     return render_template('device_form.html', 
-                           device_id=device_id, 
-                           device_name=device_name, 
-                           curr_temp=curr_temp, 
-                           max_temp=max_temp, 
-                           enabled=enabled,
-                           time=time_dt,
-                           time_diff=time_diff, 
-                           time_next=time_next_dt,
+                           data=alert_data,
+                           device_id=device_id,
                            version=VERSION
                            )
 
